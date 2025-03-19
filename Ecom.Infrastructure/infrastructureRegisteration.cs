@@ -1,33 +1,40 @@
 ﻿using Ecom.Core.interfaces;
+using Ecom.Core.Services;
 using Ecom.Infrastructure.Data;
 using Ecom.Infrastructure.Repositories;
+using Ecom.Infrastructure.Repositories.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.IO;
 
 namespace Ecom.Infrastructure
 {
-    public static class infrastructureRegisteration
+    public static class InfrastructureRegistration
     {
-        public static IServiceCollection infrastructureConfiguration(this IServiceCollection services,IConfiguration configuration)
+        public static IServiceCollection InfrastructureConfiguration(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-            //services.AddScoped<ICategoryRepository, CategoryRepository>();
-            //services.AddScoped<IProductRepository, ProductRepository>();
-            //services.AddScoped<IPhotoRepository, PhotoRepository>();
-            //Applay UnitOfWork
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+            services.AddSingleton<IManagementServices, ManagementServices>();
 
-            //Applay DbContext
-            services.AddDbContext<AppDbContext>(op =>
+            // Register IFileProvider
+            //services.AddSingleton<IFileProvider>(
+            //    new PhysicalFileProvider(Directory.GetCurrentDirectory())
+            //);
+
+            services.AddSingleton<IFileProvider>(
+               new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"))
+           );
+
+            // Apply DbContext
+            services.AddDbContext<AppDbContext>(options =>
             {
-                op.UseSqlServer(configuration.GetConnectionString("EcomDatabase"));
+                options.UseSqlServer(configuration.GetConnectionString("EcomDatabase"));
             });
+
             return services;
         }
     }

@@ -61,7 +61,7 @@ namespace Ecom.Infrastructure.Repositories
             {
                 query = query.Include(item);
             }
-            var entity = await query.FirstOrDefaultAsync(x => EF.Property<int>(x, "id") == id);
+            var entity = await query.FirstOrDefaultAsync(x => EF.Property<int>(x, "Id") == id);
             return entity;
         }
 
