@@ -3,8 +3,10 @@ using Ecom.Core.DTOS;
 using Ecom.Core.Entities.Product;
 using Ecom.Core.interfaces;
 using Ecom.Core.Services;
+using Ecom.Core.Sharing;
 using Ecom.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +27,49 @@ namespace Ecom.Infrastructure.Repositories
             _managementServices = managementServices;
         }
 
+        public async Task<ReturnProductDto> GetAllAsync(ProductParams productParams)
+        {
+            var query = _context.Products
+                .Include(m => m.Category)
+                .Include(m => m.Photos)
+                .AsNoTracking();
+
+
+            //Filtering by word
+            if (!string.IsNullOrEmpty(productParams.Search))
+            {
+                var searchWords = productParams.Search.Split(' ');
+                query = query.Where(m => searchWords.All(word =>
+                m.Name.ToLower().Contains(word.ToLower())||
+                m.Description.ToLower().Contains(word.ToLower())
+                ));
+
+            }
+
+            //Filter by category Id
+            if (productParams.CategoryId.HasValue)
+            {
+                query = query.Where(m => m.CategoryId == productParams.CategoryId);
+            }
+
+            if (!string.IsNullOrEmpty(productParams.Sort))
+            {
+                query = (productParams.Sort?.Trim()) switch
+                {
+                    "PriceAsc" => query.OrderBy(m => m.NewPrice),
+                    "PriceDesc" => query.OrderByDescending(m => m.NewPrice),
+                    _ => query.OrderBy(m => m.Name),
+                };
+            }
+
+            ReturnProductDto returnProductDto = new ReturnProductDto();
+
+            returnProductDto.TotalCount = query.Count();
+            query = query.Skip((productParams.pageSize) * (productParams.PageNumber - 1)).Take(productParams.pageSize);
+            returnProductDto.products= _mapper.Map<List<ProductDto>>(query);
+            return returnProductDto;
+        }
+
         public async Task<bool> AddAsync(AddProductDto addProductDto)
         {
             var product = _mapper.Map<Product>(addProductDto);
@@ -41,7 +86,6 @@ namespace Ecom.Infrastructure.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
-
         public async Task<bool> UpdateAsync(UpdateProductDto updateProductDto)
         {
             var exsitedProduct = await _context.Products.Include(m => m.Category)
@@ -71,9 +115,6 @@ namespace Ecom.Infrastructure.Repositories
             return true;
 
         }
-
-
-
         public async Task DeleteAsync(Product product)
         {
             var photo=await _context.Photos.Where(m=>m.ProductId==product.Id)

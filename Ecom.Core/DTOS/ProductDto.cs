@@ -10,8 +10,14 @@ using System.Threading.Tasks;
 namespace Ecom.Core.DTOS
 {
     public record ProductDto
-         (string Name, string Description, decimal Price, string CategoryName,List<PhotoDto> Photos);
+         (int id,string Name, string Description, decimal NewPrice,string OldPrice, string CategoryName,List<PhotoDto> Photos);
 
+
+    public record ReturnProductDto
+    {
+        public List<ProductDto> products { get; set; }
+        public int TotalCount { get; set; }
+    }
     public record PhotoDto
         (string ImageName,int ProductId);
 
